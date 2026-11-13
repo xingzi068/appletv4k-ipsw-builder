@@ -1,0 +1,44 @@
+name: Build AppleTV6,2 IPSW
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 300
+    steps:
+      - name: Free disk space
+        run: |
+          df -h / || true
+          sudo rm -rf /Applications/Xcode*.app
+          sudo rm -rf /usr/local/lib/android /usr/local/.ghcup /opt/homebrew/Caskroom 2>/dev/null || true
+          df -h /
+
+      - name: Install Rosetta (for x86_64 Darwin tools)
+        run: softwareupdate --install-rosetta --agree-to-license || true
+
+      - name: Get build script
+        run: |
+          git clone --depth 1 https://github.com/verygenericname/TV4K_IPSW_Script.git
+          cd TV4K_IPSW_Script
+          command -v wget >/dev/null 2>&1 || brew install wget
+
+      - name: Build IPSW
+        working-directory: TV4K_IPSW_Script
+        run: |
+          ./makeipsw.sh \
+            "https://updates.cdn-apple.com/2026SummerFCS/patches/142-24095/E65C6CD5-EE25-4E4E-B8A1-E92DA0C3CB1D/com_apple_MobileAsset_SoftwareUpdate/32e4fe649fd577bc935243b8a52f7eed18241530.zip" \
+            "https://updates.cdn-apple.com/2026SummerFCS/fullrestores/142-23175/686B5890-EE38-4DFD-9A0D-6848A994D337/AppleTV5,3_26.6.1_23L781_Restore.ipsw"
+
+      - name: Show result
+        if: always()
+        run: |
+          ls -lah ipsws/ || true
+          df -h / || true
+
+      - name: Upload IPSW artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appletv62-ipsw-26.6.1-23L781
+          path: ipsws/*.ipsw
+          retention-days: 7
