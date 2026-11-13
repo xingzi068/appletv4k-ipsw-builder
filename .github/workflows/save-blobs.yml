@@ -10,6 +10,10 @@ on:
         description: "Generator（checkm8 pwned DFU 用）"
         required: false
         default: "0x1111111111111111"
+      apnonce:
+        description: "可选：显式 ApNonce（64 位 hex）。留空则由 generator 推导"
+        required: false
+        default: ""
 jobs:
   tss:
     runs-on: ubuntu-latest
@@ -53,11 +57,14 @@ jobs:
         env:
           ECID: ${{ github.event.inputs.ecid }}
           GEN: ${{ github.event.inputs.generator }}
+          APNONCE: ${{ github.event.inputs.apnonce }}
         run: |
           set -x
+          EXTRA=""
+          if [ -n "$APNONCE" ]; then EXTRA="--apnonce $APNONCE"; fi
           mkdir -p blobs/erase blobs/update
-          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -e "$ECID" -g "$GEN" --save=blobs/erase/
-          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -u -e "$ECID" -g "$GEN" --save=blobs/update/
+          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -e "$ECID" -g "$GEN" $EXTRA --save=blobs/erase/
+          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -u -e "$ECID" -g "$GEN" $EXTRA --save=blobs/update/
           ls -lR blobs/
           sha256sum blobs/*/*.shsh2 || true
 
