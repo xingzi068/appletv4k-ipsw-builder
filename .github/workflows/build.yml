@@ -32,7 +32,7 @@ jobs:
       - name: Show result
         if: always()
         run: |
-          ls -lah ipsws/ || true
+          ls -lah TV4K_IPSW_Script/ipsws/ || true
           df -h / || true
 
       - name: Upload IPSW artifact
@@ -40,5 +40,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: appletv62-ipsw-26.6.1-23L781
-          path: ipsws/*.ipsw
+          path: TV4K_IPSW_Script/ipsws/*.ipsw
           retention-days: 7
