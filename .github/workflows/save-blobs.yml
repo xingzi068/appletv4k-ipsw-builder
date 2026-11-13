@@ -55,10 +55,11 @@ jobs:
           GEN: ${{ github.event.inputs.generator }}
         run: |
           set -x
-          mkdir -p blobs
-          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -e "$ECID" -g "$GEN" --save=blobs/
-          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -u -e "$ECID" -g "$GEN" --save=blobs/
-          ls -la blobs/
+          mkdir -p blobs/erase blobs/update
+          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -e "$ECID" -g "$GEN" --save=blobs/erase/
+          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -u -e "$ECID" -g "$GEN" --save=blobs/update/
+          ls -lR blobs/
+          sha256sum blobs/*/*.shsh2 || true
 
       - name: 上传 blob
         if: github.event.inputs.ecid != ''
