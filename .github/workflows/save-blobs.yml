@@ -1,0 +1,52 @@
+name: tsschecker - check signing / save blobs
+on:
+  workflow_dispatch:
+    inputs:
+      ecid:
+        description: "ECID (dec or hex). Leave empty to only CHECK signing status."
+        required: false
+        default: ""
+      generator:
+        description: "Generator (for checkm8 pwned DFU restores)"
+        required: false
+        default: "0x1111111111111111"
+jobs:
+  tss:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build tsschecker
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+            libcurl4-openssl-dev libplist-dev libssl-dev libusb-1.0-0-dev libimobiledevice-dev libzip-dev
+          git clone --recursive --depth 1 https://github.com/tihmstar/libfragmentzip.git
+          cd libfragmentzip && ./autogen.sh && make -j$(nproc) && sudo make install && sudo ldconfig
+          cd ..
+          git clone --recursive --depth 1 https://github.com/tihmstar/tsschecker.git
+          cd tsschecker && ./autogen.sh && make -j$(nproc) && sudo make install && sudo ldconfig
+          tsschecker --help | head -5
+
+      - name: Check signing status (erase)
+        run: tsschecker -d AppleTV6,2 -m BuildManifest.plist -b --nocache
+      - name: Check signing status (update)
+        run: tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -u --nocache
+
+      - name: Save blobs
+        if: ${{ github.event.inputs.ecid != '' }}
+        run: |
+          mkdir blobs
+          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -e "${{ github.event.inputs.ecid }}" -g "${{ github.event.inputs.generator }}" -s blobs/
+          tsschecker -d AppleTV6,2 -m BuildManifest.plist -b -e "${{ github.event.inputs.ecid }}" -g "${{ github.event.inputs.generator }}" -s blobs/ -u
+          ls -la blobs/
+
+      - name: Upload blobs
+        if: ${{ github.event.inputs.ecid != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shsh2-blobs
+          path: blobs/
+          if-no-files-found: error
+          retention-days: 30
